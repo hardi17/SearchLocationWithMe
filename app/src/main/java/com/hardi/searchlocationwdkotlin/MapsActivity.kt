@@ -2,10 +2,13 @@ package com.hardi.searchlocationwdkotlin
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.location.Address
 import android.location.Geocoder
 import android.location.Location
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.provider.Telephony
+import android.widget.SearchView
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -40,7 +43,44 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
 
+        getYourSearchlocation()
         getCurrentLocationUser()
+    }
+
+    private fun getYourSearchlocation() {
+        binding.searchview.setOnQueryTextListener(object: SearchView.OnQueryTextListener,
+            androidx.appcompat.widget.SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                val location = binding.searchview.query.toString()
+                var addressList: List<Address>? = null
+
+                if(location != null){
+                    val geocoder = Geocoder(this@MapsActivity)
+
+                    try{
+                        addressList = geocoder.getFromLocationName(location,5)
+                    }catch (e:Exception){
+                        e.printStackTrace()
+                    }
+
+                    val address: Address = addressList!!.get(0)
+                    val latlang = LatLng(address.latitude, address.longitude)
+                    val markerOptions = MarkerOptions().position(latlang).title(address.toString())
+
+                    mMap.animateCamera(CameraUpdateFactory.newLatLng(latlang))
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlang, 10f))
+                    mMap.addMarker(markerOptions)
+
+                }
+
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                return false
+            }
+
+        })
     }
 
     /*check location permission and get current location*/
@@ -96,26 +136,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    /*Using this function we set lattitude and longitude in our map
-      also we are getting area name using geocoder and
-      set map marker to our location*/
-    override fun onMapReady(googleMap: GoogleMap) {
-        val latlang = LatLng(currentLocation.latitude, currentLocation.longitude)
-        val geoCoder = Geocoder(this, Locale.getDefault())
-        val address =
-            geoCoder.getFromLocation(currentLocation.latitude, currentLocation.longitude, 1)
-        var addressArea = address!![0].adminArea
-        if (addressArea == null) {
-            addressArea = address[0].locality
-            if (addressArea == null) {
-                addressArea = address[0].subAdminArea
-            }
-        }
-        val markerOptions = MarkerOptions().position(latlang).title(addressArea.toString())
 
-        googleMap?.animateCamera(CameraUpdateFactory.newLatLng(latlang))
-        googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latlang, 10f))
-        googleMap?.addMarker(markerOptions)
+    override fun onMapReady(googleMap: GoogleMap) {
+        mMap = googleMap
     }
 
 }
